@@ -1,0 +1,133 @@
+<svg id="sch" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 545" role="img" aria-label="Top-view schematic of a conveyor sorting station with colour sensor, two pneumatic ejectors and three bins">
+  <style>
+    #sch .ln { stroke: var(--ink, #1f2b33); stroke-width: 1.5; fill: none; }
+    #sch .st { stroke: var(--ink, #1f2b33); stroke-width: 1.5; fill: var(--sheet, #ffffff); }
+    #sch .belt { fill: var(--belt, #c9d1d6); stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+    #sch .slat { stroke: var(--ink, #1f2b33); stroke-opacity: .18; stroke-width: 1; }
+    #sch .sens { fill: var(--sensor-tint, #e0f2f4); stroke: var(--sensor, #0f7f8c); stroke-width: 1.8; }
+    #sch .act { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.8; }
+    #sch .actl { stroke: var(--act, #b86a00); stroke-width: 1.8; fill: none; }
+    #sch .beam { stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
+    #sch .ghost { stroke: var(--act, #b86a00); stroke-width: 1.2; stroke-dasharray: 4 3; fill: none; }
+    #sch .air { stroke: var(--muted, #5c6b75); stroke-width: 2; fill: none; }
+    #sch text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--muted, #5c6b75); }
+    #sch .ts { fill: var(--sensor, #0f7f8c); font-weight: 600; font-size: 13px; }
+    #sch .ta { fill: var(--act, #b86a00); font-weight: 600; font-size: 13px; }
+    #sch .tk { fill: var(--ink, #1f2b33); font-weight: 600; font-size: 13px; }
+    #sch .pr { fill: var(--red, #d1453b); stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+    #sch .pb { fill: var(--blue, #2f6fd0); stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+    #sch .pw { fill: var(--white, #fbfbf8); stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+    #sch .fillink { fill: var(--ink, #1f2b33); }
+    #sch .fillmuted { fill: var(--muted, #5c6b75); }
+    #sch .fillact { fill: var(--act, #b86a00); }
+    #sch .on .sens, #sch .sens.on { fill: var(--sensor, #0f7f8c); }
+    #sch .on .act, #sch .act.on { fill: var(--act, #b86a00); }
+    #sch .on .beam { stroke-dasharray: none; stroke-width: 2.5; }
+  </style>
+  <defs>
+    <marker id="sch-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" class="fillink"/>
+    </marker>
+    <marker id="sch-arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" class="fillact"/>
+    </marker>
+    <clipPath id="beltclip"><rect x="110" y="230" width="750" height="80"/></clipPath>
+  </defs>
+
+  <!-- compressed air supply -->
+  <circle cx="300" cy="46" r="10" class="st"/>
+  <path d="M296 41 L305 46 L296 51 z" class="fillmuted"/>
+  <text x="200" y="30">compressed air 6 bar</text>
+  <path d="M310 46 H630 M430 46 V105 M630 46 V105" class="air"/>
+
+  <!-- belt -->
+  <rect x="110" y="230" width="750" height="80" class="belt"/>
+  <g clip-path="url(#beltclip)"><path id="slats" class="slat" d="M80 230v80M110 230v80M140 230v80M170 230v80M200 230v80M230 230v80M260 230v80M290 230v80M320 230v80M350 230v80M380 230v80M410 230v80M440 230v80M470 230v80M500 230v80M530 230v80M560 230v80M590 230v80M620 230v80M650 230v80M680 230v80M710 230v80M740 230v80M770 230v80M800 230v80M830 230v80M860 230v80"/></g>
+  <rect x="100" y="224" width="20" height="92" rx="6" class="st"/>
+  <rect x="850" y="224" width="20" height="92" rx="6" class="st"/>
+  <line x1="760" y1="214" x2="840" y2="214" class="ln" marker-end="url(#sch-arr)"/>
+  <text x="762" y="206">transport</text>
+
+  <!-- belt motor -->
+  <g id="m1">
+    <line x1="110" y1="224" x2="110" y2="180" class="actl"/>
+    <rect x="82" y="140" width="56" height="40" rx="4" class="act"/>
+    <circle cx="110" cy="160" r="13" class="act"/>
+  </g>
+  <text x="104" y="165" class="tk" style="font-size:12px">M</text>
+  <text x="70" y="118" class="ta">belt</text>
+  <text x="108" y="118">motor</text>
+
+  <!-- B1 entry light barrier -->
+  <g id="b1">
+    <rect x="144" y="212" width="12" height="12" class="sens"/>
+    <rect x="144" y="316" width="12" height="12" class="sens"/>
+    <line x1="150" y1="224" x2="150" y2="316" class="beam"/>
+  </g>
+  <text x="128" y="350" class="ts">B1</text>
+  <text x="128" y="366">part at entry</text>
+  <text x="128" y="400" class="tk">▲ insert part</text>
+
+  <!-- photoSensor (colour) -->
+  <g id="b2">
+    <rect x="276" y="150" width="48" height="36" rx="4" class="sens"/>
+    <circle id="b2lens" cx="300" cy="168" r="8" class="sens"/>
+    <path d="M292 186 L278 256 M308 186 L322 256" class="beam"/>
+  </g>
+  <text x="246" y="122" class="ts">photoSensor</text>
+  <text x="246" y="138">reads colour</text>
+
+  <!-- ejector 1 (red) -->
+  <g id="y1"><rect x="405" y="105" width="50" height="28" class="act"/><rect x="393" y="110" width="12" height="18" class="act"/></g>
+  <path d="M455 112 H466 V90 H478 M455 126 H466 V165 H478" class="air"/>
+  <text x="388" y="124" text-anchor="end" class="ta">valve1</text>
+  <rect x="478" y="70" width="44" height="110" rx="3" class="act"/>
+  <line x1="480" y1="100" x2="520" y2="100" class="actl"/>
+  <rect x="470" y="300" width="60" height="8" class="ghost"/>
+  <line x1="540" y1="226" x2="540" y2="296" class="ghost" marker-end="url(#sch-arrA)"/>
+  <line id="rod1" x1="500" y1="100" x2="500" y2="212" class="actl" style="stroke-width:4"/>
+  <rect id="plate1" x="470" y="212" width="60" height="8" class="act"/>
+  <rect id="s1" x="522" y="78" width="12" height="10" class="sens"/>
+  <rect id="s2" x="522" y="160" width="12" height="10" class="sens"/>
+  <text x="540" y="87" class="ts">S1</text><text x="560" y="87">in</text>
+  <text x="540" y="169" class="ts">S2</text><text x="560" y="169">out</text>
+  <g id="b3"><rect x="494" y="316" width="12" height="10" class="sens"/><line x1="500" y1="316" x2="500" y2="294" class="beam"/></g>
+  <text x="488" y="326" text-anchor="end" class="ts">B3</text>
+  <path d="M466 332 V412 H534 V332" class="st"/>
+  <text x="466" y="432" class="tk">Bin 1</text><text x="466" y="448">red</text>
+  <text id="bin1n" x="534" y="432" text-anchor="end"></text>
+
+  <!-- ejector 2 (blue) -->
+  <g id="y2"><rect x="605" y="105" width="50" height="28" class="act"/><rect x="593" y="110" width="12" height="18" class="act"/></g>
+  <path d="M655 112 H666 V90 H678 M655 126 H666 V165 H678" class="air"/>
+  <text x="588" y="124" text-anchor="end" class="ta">valve2</text>
+  <rect x="678" y="70" width="44" height="110" rx="3" class="act"/>
+  <line x1="680" y1="100" x2="720" y2="100" class="actl"/>
+  <rect x="670" y="300" width="60" height="8" class="ghost"/>
+  <line x1="740" y1="226" x2="740" y2="296" class="ghost" marker-end="url(#sch-arrA)"/>
+  <line id="rod2" x1="700" y1="100" x2="700" y2="212" class="actl" style="stroke-width:4"/>
+  <rect id="plate2" x="670" y="212" width="60" height="8" class="act"/>
+  <rect id="s3" x="722" y="78" width="12" height="10" class="sens"/>
+  <rect id="s4" x="722" y="160" width="12" height="10" class="sens"/>
+  <text x="740" y="87" class="ts">S3</text><text x="760" y="87">in</text>
+  <text x="740" y="169" class="ts">S4</text><text x="760" y="169">out</text>
+  <g id="b4"><rect x="694" y="316" width="12" height="10" class="sens"/><line x1="700" y1="316" x2="700" y2="294" class="beam"/></g>
+  <text x="688" y="326" text-anchor="end" class="ts">B4</text>
+  <path d="M666 332 V412 H734 V332" class="st"/>
+  <text x="666" y="432" class="tk">Bin 2</text><text x="666" y="448">blue</text>
+  <text id="bin2n" x="734" y="432" text-anchor="end"></text>
+
+  <!-- bin 3 at belt end -->
+  <path d="M884 228 H960 V312 H884" class="st"/>
+  <text x="884" y="336" class="tk">Bin 3</text><text x="884" y="352">other</text>
+  <text id="bin3n" x="960" y="336" text-anchor="end"></text>
+
+  <!-- parts (drawn above everything on the machine) -->
+  <g id="parts">{{static_parts}}</g>
+
+  <!-- controller -->
+  <rect x="40" y="466" width="420" height="70" rx="6" class="st"/>
+  <text x="54" y="488" class="tk">Controller (PLC)</text>
+  <text x="54" y="508"><tspan class="ts" style="font-size:12px">DI</tspan>  B1, photoSensor, B3, B4, S1–S4</text>
+  <text x="54" y="526"><tspan class="ta" style="font-size:12px">DO</tspan>  belt, valve1, valve2</text>
+</svg>

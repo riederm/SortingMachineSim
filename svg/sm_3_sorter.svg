@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="980" height="380" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 380" role="img" aria-label="Sorter state machine"><style>
+  .st { fill: #ffffff; stroke: #1f2b33; stroke-width: 1.6; }
+  .comp { fill: none; stroke: #1f2b33; stroke-width: 1.4; }
+  .flt { fill: #fbefdc; stroke: #b86a00; stroke-width: 1.6; }
+  .note { fill: #f3f5f6; stroke: #5c6b75; stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: #1f2b33; stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: #1f2b33; stroke-width: 1.5; }
+  .trc { fill: none; stroke: #0f7f8c; stroke-width: 1.5; }
+  .dot { fill: #1f2b33; }
+  .ah { fill: #1f2b33; }
+  .ahc { fill: #0f7f8c; }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: #1f2b33; white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: #5c6b75; }
+  .ac { font-size: 11.5px; fill: #5c6b75; }
+  .lb { font-size: 12px; fill: #0f7f8c; }
+  .lbk { font-size: 12px; fill: #1f2b33; }
+</style>
+<rect width="980" height="380" fill="#ffffff"/>
+<circle cx="35" cy="91" r="7" class="dot"/>
+<g id="t-so-init" class="trans">
+<path d="M42 91 L70 91" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(70 91) rotate(0.0)"/>
+</g>
+<g id="s-so-WaitPart" class="state">
+<rect x="70" y="55" width="230" height="72" rx="12" class="st"/>
+<text x="185.0" y="76" text-anchor="middle" class="nm">WaitPart</text>
+<line x1="70" y1="85" x2="300" y2="85" class="div"/>
+<text x="82" y="103" class="ac">entry / conveyor.stop</text>
+</g>
+<g id="s-so-ToSensor" class="state">
+<rect x="480" y="55" width="200" height="72" rx="12" class="st"/>
+<text x="580.0" y="76" text-anchor="middle" class="nm">ToSensor</text>
+<line x1="480" y1="85" x2="680" y2="85" class="div"/>
+<text x="492" y="103" class="ac">entry / conveyor.run</text>
+</g>
+<g id="t-so-b1" class="trans">
+<path d="M300 91 L480 91" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 91) rotate(0.0)"/>
+<text x="390" y="83" text-anchor="middle" class="lb">B1 ↑</text>
+</g>
+<path d="M580 189 L596 205 L580 221 L564 205 z" class="st"/>
+<g id="t-so-b2" class="trans">
+<path d="M580 127 L580 189" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(580 189) rotate(90.0)"/>
+<text x="590" y="160" text-anchor="start" class="lb">photoSensor colour c / target := binFor(c)</text>
+</g>
+<g id="s-so-ToEnd" class="state">
+<rect x="740" y="170" width="200" height="70" rx="12" class="st"/>
+<text x="840.0" y="191" text-anchor="middle" class="nm">ToEnd</text>
+<line x1="740" y1="200" x2="940" y2="200" class="div"/>
+<text x="752" y="218" class="ac">do / let part run off</text>
+</g>
+<g id="t-so-toEnd" class="trans">
+<path d="M596 205 L740 205" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(740 205) rotate(0.0)"/>
+<text x="668" y="197" text-anchor="middle" class="lb">[target = none]</text>
+</g>
+<g id="s-so-ToEjector" class="state">
+<rect x="480" y="290" width="200" height="72" rx="12" class="st"/>
+<text x="580.0" y="311" text-anchor="middle" class="nm">ToEjector</text>
+<line x1="480" y1="320" x2="680" y2="320" class="div"/>
+<text x="492" y="338" class="ac">(belt keeps running)</text>
+</g>
+<g id="t-so-toEj" class="trans">
+<path d="M580 221 L580 290" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(580 290) rotate(90.0)"/>
+<text x="590" y="262" text-anchor="start" class="lb">[target = 1 or 2]</text>
+</g>
+<g id="s-so-Ejecting" class="state">
+<rect x="70" y="290" width="230" height="72" rx="12" class="st"/>
+<text x="185.0" y="311" text-anchor="middle" class="nm">Ejecting</text>
+<line x1="70" y1="320" x2="300" y2="320" class="div"/>
+<text x="82" y="338" class="ac">entry / conveyor.stop</text>
+<text x="82" y="354" class="ac">entry / ejector[target].push</text>
+</g>
+<g id="t-so-atEj1" class="trans">
+<path d="M480 312 L300 312" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(300 312) rotate(180.0)"/>
+<text x="390" y="304" text-anchor="middle" class="lb">B3 ↑ [target = 1]</text>
+</g>
+<g id="t-so-atEj2" class="trans">
+<path d="M480 344 L300 344" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(300 344) rotate(180.0)"/>
+<text x="390" y="362" text-anchor="middle" class="lb">B4 ↑ [target = 2]</text>
+</g>
+<g id="t-so-done" class="trans">
+<path d="M185 290 L185 127" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(185 127) rotate(-90.0)"/>
+<text x="195" y="212" text-anchor="start" class="lb">ejector[target].done</text>
+</g>
+<g id="t-so-end" class="trans">
+<path d="M925 170 L925 30 L185 30 L185 55" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(185 55) rotate(90.0)"/>
+<text x="550" y="22" text-anchor="middle" class="lb">after(6 s)</text>
+</g>
+</svg>

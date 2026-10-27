@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="720" height="350" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 350" role="img" aria-label="Ejector state machine (valve)"><style>
+  .st { fill: #ffffff; stroke: #1f2b33; stroke-width: 1.6; }
+  .comp { fill: none; stroke: #1f2b33; stroke-width: 1.4; }
+  .flt { fill: #fbefdc; stroke: #b86a00; stroke-width: 1.6; }
+  .note { fill: #f3f5f6; stroke: #5c6b75; stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: #1f2b33; stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: #1f2b33; stroke-width: 1.5; }
+  .trc { fill: none; stroke: #0f7f8c; stroke-width: 1.5; }
+  .dot { fill: #1f2b33; }
+  .ah { fill: #1f2b33; }
+  .ahc { fill: #0f7f8c; }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: #1f2b33; white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: #5c6b75; }
+  .ac { font-size: 11.5px; fill: #5c6b75; }
+  .lb { font-size: 12px; fill: #0f7f8c; }
+  .lbk { font-size: 12px; fill: #1f2b33; }
+</style>
+<rect width="720" height="350" fill="#ffffff"/>
+<circle cx="25" cy="115" r="7" class="dot"/>
+<g id="t-ej-init" class="trans">
+<path d="M32 115 L60 115" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(60 115) rotate(0.0)"/>
+</g>
+<g id="s-ej-Retracted" class="state">
+<rect x="60" y="80" width="210" height="70" rx="12" class="st"/>
+<text x="165.0" y="101" text-anchor="middle" class="nm">Retracted</text>
+<line x1="60" y1="110" x2="270" y2="110" class="div"/>
+<text x="72" y="128" class="ac">entry / valve := 0</text>
+</g>
+<g id="s-ej-Extending" class="state">
+<rect x="480" y="80" width="210" height="70" rx="12" class="st"/>
+<text x="585.0" y="101" text-anchor="middle" class="nm">Extending</text>
+<line x1="480" y1="110" x2="690" y2="110" class="div"/>
+<text x="492" y="128" class="ac">entry / valve := 1</text>
+</g>
+<g id="s-ej-Retracting" class="state">
+<rect x="270" y="260" width="210" height="70" rx="12" class="st"/>
+<text x="375.0" y="281" text-anchor="middle" class="nm">Retracting</text>
+<line x1="270" y1="290" x2="480" y2="290" class="div"/>
+<text x="282" y="308" class="ac">entry / valve := 0</text>
+</g>
+<g id="t-ej-push" class="trans">
+<path d="M270 115 L480 115" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 115) rotate(0.0)"/>
+<text x="375" y="107" text-anchor="middle" class="lb">push</text>
+</g>
+<g id="t-ej-out" class="trans">
+<path d="M585 150 L585 295 L480 295" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 295) rotate(180.0)"/>
+<text x="595" y="225" text-anchor="start" class="lb">when(S_out)</text>
+</g>
+<g id="t-ej-in" class="trans">
+<path d="M270 295 L165 295 L165 150" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(165 150) rotate(-90.0)"/>
+<text x="175" y="225" text-anchor="start" class="lb">when(S_in) / send done</text>
+</g>
+</svg>

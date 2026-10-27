@@ -1,0 +1,68 @@
+<title>Conveyor Sorting Station v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  /* Layout: one wide technical drawing on a sheet, I/O list underneath in two columns */
+  :root {
+    --bg: #f3f5f6; --sheet: #ffffff; --ink: #1f2b33; --muted: #5c6b75; --rule: #d3dade;
+    --belt: #c9d1d6; --sensor: #0f7f8c; --sensor-tint: #e0f2f4; --act: #b86a00; --act-tint: #fbefdc;
+    --red: #d1453b; --blue: #2f6fd0; --white: #fbfbf8;
+    --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #12181c; --sheet: #182127; --ink: #dfe7ec; --muted: #94a3ad; --rule: #2e3a42;
+    --belt: #34424b; --sensor: #4cc3d0; --sensor-tint: #143238; --act: #f0a640; --act-tint: #3a2a12;
+    --red: #e8665c; --blue: #5d93ea; --white: #e9ebe6; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #12181c; --sheet: #182127; --ink: #dfe7ec; --muted: #94a3ad; --rule: #2e3a42;
+    --belt: #34424b; --sensor: #4cc3d0; --sensor-tint: #143238; --act: #f0a640; --act-tint: #3a2a12;
+    --red: #e8665c; --blue: #5d93ea; --white: #e9ebe6; color-scheme: dark }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 40px; }
+  main { max-width: 1080px; margin: 0 auto; display: grid; gap: 20px; }
+  h1 { font-size: 1.6rem; margin: 0; text-wrap: balance; }
+  header p { margin: 4px 0 0; color: var(--muted); max-width: 65ch; }
+  .sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; overflow-x: auto; }
+  .sheet svg { display: block; width: 100%; min-width: 760px; height: auto; }
+  .io { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .io section { min-width: 0; }
+  .io h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 6px; }
+  .io h2.in { color: var(--sensor); } .io h2.out { color: var(--act); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+  td { padding: 5px 8px 5px 0; border-top: 1px solid var(--rule); vertical-align: top; }
+  td:first-child { font-family: var(--mono); font-weight: 600; white-space: nowrap; width: 7.5em; }
+  td:last-child { color: var(--muted); font-family: var(--mono); font-size: 0.82rem; white-space: nowrap; text-align: right; }
+</style>
+
+<main>
+  <header>
+    <h1>Conveyor Sorting Station</h1>
+    <p>Top view. Parts are placed on the belt at the left. A colour sensor classifies each part, and two pneumatic ejectors push red and blue parts into their bins. All other parts run off the end of the belt into bin 3.</p>
+  </header>
+
+  <div class="sheet">
+{{schematic}}
+  </div>
+
+  <div class="io">
+    <section>
+      <h2 class="in">Inputs · sensors</h2>
+      <table>
+        <tr><td>B1</td><td>Light barrier, part at belt entry</td><td>DI bool</td></tr>
+        <tr><td>photoSensor</td><td>Colour sensor under which parts pass</td><td>red / blue / other</td></tr>
+        <tr><td>B3, B4</td><td>Light sensor, part centred in front of ejector 1 / 2</td><td>DI bool</td></tr>
+        <tr><td>S1, S3</td><td>Cylinder 1 / 2 retracted (end switch)</td><td>DI bool</td></tr>
+        <tr><td>S2, S4</td><td>Cylinder 1 / 2 extended (end switch)</td><td>DI bool</td></tr>
+      </table>
+    </section>
+    <section>
+      <h2 class="out">Outputs · actuators</h2>
+      <table>
+        <tr><td>belt</td><td>Belt motor, one direction</td><td>DO bool</td></tr>
+        <tr><td>valve1</td><td>Solenoid valve, extend cylinder 1 (spring return)</td><td>DO bool</td></tr>
+        <tr><td>valve2</td><td>Solenoid valve, extend cylinder 2 (spring return)</td><td>DO bool</td></tr>
+      </table>
+    </section>
+  </div>
+</main>

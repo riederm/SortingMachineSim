@@ -1,0 +1,83 @@
+<title>Sorting Station State Machines v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  /* Layout: one reading column; each machine is a numbered section with a short brief and a full-width drawing sheet */
+  :root {
+    --bg: #f3f5f6; --sheet: #ffffff; --ink: #1f2b33; --muted: #5c6b75; --rule: #d3dade;
+    --sensor: #0f7f8c; --act: #b86a00; --act-tint: #fbefdc;
+    --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #12181c; --sheet: #182127; --ink: #dfe7ec; --muted: #94a3ad; --rule: #2e3a42;
+    --sensor: #4cc3d0; --act: #f0a640; --act-tint: #3a2a12; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #12181c; --sheet: #182127; --ink: #dfe7ec; --muted: #94a3ad; --rule: #2e3a42;
+    --sensor: #4cc3d0; --act: #f0a640; --act-tint: #3a2a12; color-scheme: dark }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 1060px; margin: 0 auto; display: grid; gap: 36px; }
+  h1 { font-size: 1.6rem; margin: 0; text-wrap: balance; }
+  h2 { font-size: 1.15rem; margin: 0; text-wrap: balance; }
+  p { margin: 0; max-width: 68ch; }
+  header, section { display: grid; gap: 10px; }
+  header p, section > p { color: var(--muted); }
+  code { font-family: var(--mono); font-size: 0.88em; }
+  .sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; overflow-x: auto; padding: 12px; }
+  .sheet svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+  .w1 svg { min-width: 760px; } .w2 svg { max-width: 560px; min-width: 420px; }
+  .notation { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 24px; font-size: 0.9rem; }
+  .notation div { min-width: 0; }
+  .notation code { color: var(--sensor); }
+  ul { margin: 0; padding-left: 1.2em; max-width: 68ch; color: var(--muted); }
+</style>
+
+<main>
+  <header>
+    <h1>Sorting Station State Machines</h1>
+    <p>Simplified version. The controller consists of three kinds of state machine: a sorter, a conveyor and two instances of an ejector. The sorter starts as soon as the machine is switched on. It handles one part on the belt at a time, and there is no fault handling.</p>
+    <div class="notation">
+      <div><code>B1 ↑</code> rising edge of a sensor</div>
+      <div><code>[guard]</code> condition that must hold</div>
+      <div><code>/ action</code> done when the transition fires</div>
+      <div><code>after(6 s)</code> fires 6 s after entering the state</div>
+      <div><code>entry / do</code> on entering / while in a state</div>
+      <div><code>when(c)</code> fires as soon as condition c is true</div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Overview: who talks to whom</h2>
+    <p>Each machine owns its outputs. Only the conveyor switches the belt, only an ejector switches its valve. The sorter sends them commands and waits for the ejectors to report back.</p>
+    <div class="sheet w1">{{0_overview}}</div>
+  </section>
+
+  <section>
+    <h2>Sorter</h2>
+    <p>Follows one part from the entry to its bin. The colour read by the photoSensor decides the target. In ToEjector the machine waits for the sensor of <em>its</em> ejector, so a blue part simply passes B3. Bin 3 has no sensor, so ToEnd uses a timeout.</p>
+    <div class="sheet w1">{{3_sorter}}</div>
+  </section>
+
+  <section>
+    <h2>Ejector (two instances)</h2>
+    <p>One generic definition, used twice: Ejector 1 with <code>valve = valve1</code>, <code>S_in = S1</code>, <code>S_out = S2</code>; Ejector 2 with <code>valve2</code>, <code>S3</code>, <code>S4</code>. It retracts by itself once the cylinder is fully out, then reports <code>done</code>.</p>
+    <div class="sheet w1">{{1_ejector}}</div>
+  </section>
+
+  <section>
+    <h2>Conveyor</h2>
+    <p>The smallest machine. A good first exercise, and it shows why the sorter sends commands instead of switching the belt directly.</p>
+    <div class="sheet w2">{{2_conveyor}}</div>
+  </section>
+
+  <section>
+    <h2>Ideas for follow-up exercises</h2>
+    <ul>
+      <li>Add timeouts to the ejector: what happens if a cylinder gets stuck?</li>
+      <li>Add a start and stop button: which machine should own them?</li>
+      <li>Allow several parts on the belt: keep a queue of targets instead of one variable.</li>
+      <li>Implement the machines in IEC 61131-3 (CASE statement or SFC) and test them against a simulation.</li>
+    </ul>
+  </section>
+</main>

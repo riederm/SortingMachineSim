@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="560" height="200" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 200" role="img" aria-label="Conveyor state machine"><style>
+  .st { fill: #ffffff; stroke: #1f2b33; stroke-width: 1.6; }
+  .comp { fill: none; stroke: #1f2b33; stroke-width: 1.4; }
+  .flt { fill: #fbefdc; stroke: #b86a00; stroke-width: 1.6; }
+  .note { fill: #f3f5f6; stroke: #5c6b75; stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: #1f2b33; stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: #1f2b33; stroke-width: 1.5; }
+  .trc { fill: none; stroke: #0f7f8c; stroke-width: 1.5; }
+  .dot { fill: #1f2b33; }
+  .ah { fill: #1f2b33; }
+  .ahc { fill: #0f7f8c; }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: #1f2b33; white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: #5c6b75; }
+  .ac { font-size: 11.5px; fill: #5c6b75; }
+  .lb { font-size: 12px; fill: #0f7f8c; }
+  .lbk { font-size: 12px; fill: #1f2b33; }
+</style>
+<rect width="560" height="200" fill="#ffffff"/>
+<g id="s-cv-Stopped" class="state">
+<rect x="60" y="40" width="170" height="70" rx="12" class="st"/>
+<text x="145.0" y="61" text-anchor="middle" class="nm">Stopped</text>
+<line x1="60" y1="70" x2="230" y2="70" class="div"/>
+<text x="72" y="88" class="ac">entry / belt := 0</text>
+</g>
+<g id="s-cv-Running" class="state">
+<rect x="330" y="40" width="170" height="70" rx="12" class="st"/>
+<text x="415.0" y="61" text-anchor="middle" class="nm">Running</text>
+<line x1="330" y1="70" x2="500" y2="70" class="div"/>
+<text x="342" y="88" class="ac">entry / belt := 1</text>
+</g>
+<g id="t-cv-run" class="trans">
+<path d="M230 64 L330 64" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(330 64) rotate(0.0)"/>
+<text x="280" y="56" text-anchor="middle" class="lb">run</text>
+</g>
+<g id="t-cv-stop" class="trans">
+<path d="M330 94 L230 94" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(230 94) rotate(180.0)"/>
+<text x="280" y="110" text-anchor="middle" class="lb">stop</text>
+</g>
+<circle cx="145" cy="175" r="7" class="dot"/>
+<g id="t-cv-init" class="trans">
+<path d="M145 168 L145 110" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(145 110) rotate(-90.0)"/>
+</g>
+</svg>

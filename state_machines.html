@@ -1,0 +1,334 @@
+<title>Sorting Station State Machines v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  /* Layout: one reading column; each machine is a numbered section with a short brief and a full-width drawing sheet */
+  :root {
+    --bg: #f3f5f6; --sheet: #ffffff; --ink: #1f2b33; --muted: #5c6b75; --rule: #d3dade;
+    --sensor: #0f7f8c; --act: #b86a00; --act-tint: #fbefdc;
+    --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #12181c; --sheet: #182127; --ink: #dfe7ec; --muted: #94a3ad; --rule: #2e3a42;
+    --sensor: #4cc3d0; --act: #f0a640; --act-tint: #3a2a12; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #12181c; --sheet: #182127; --ink: #dfe7ec; --muted: #94a3ad; --rule: #2e3a42;
+    --sensor: #4cc3d0; --act: #f0a640; --act-tint: #3a2a12; color-scheme: dark }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 48px; }
+  main { max-width: 1060px; margin: 0 auto; display: grid; gap: 36px; }
+  h1 { font-size: 1.6rem; margin: 0; text-wrap: balance; }
+  h2 { font-size: 1.15rem; margin: 0; text-wrap: balance; }
+  p { margin: 0; max-width: 68ch; }
+  header, section { display: grid; gap: 10px; }
+  header p, section > p { color: var(--muted); }
+  code { font-family: var(--mono); font-size: 0.88em; }
+  .sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; overflow-x: auto; padding: 12px; }
+  .sheet svg { display: block; width: 100%; height: auto; margin: 0 auto; }
+  .w1 svg { min-width: 760px; } .w2 svg { max-width: 560px; min-width: 420px; }
+  .notation { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 6px 24px; font-size: 0.9rem; }
+  .notation div { min-width: 0; }
+  .notation code { color: var(--sensor); }
+  ul { margin: 0; padding-left: 1.2em; max-width: 68ch; color: var(--muted); }
+</style>
+
+<main>
+  <header>
+    <h1>Sorting Station State Machines</h1>
+    <p>Simplified version. The controller consists of three kinds of state machine: a sorter, a conveyor and two instances of an ejector. The sorter starts as soon as the machine is switched on. It handles one part on the belt at a time, and there is no fault handling.</p>
+    <div class="notation">
+      <div><code>B1 ↑</code> rising edge of a sensor</div>
+      <div><code>[guard]</code> condition that must hold</div>
+      <div><code>/ action</code> done when the transition fires</div>
+      <div><code>after(6 s)</code> fires 6 s after entering the state</div>
+      <div><code>entry / do</code> on entering / while in a state</div>
+      <div><code>when(c)</code> fires as soon as condition c is true</div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Overview: who talks to whom</h2>
+    <p>Each machine owns its outputs. Only the conveyor switches the belt, only an ejector switches its valve. The sorter sends them commands and waits for the ejectors to report back.</p>
+    <div class="sheet w1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 240" role="img" aria-label="Communication between the state machines"><style>
+  .st { fill: var(--sheet, #ffffff); stroke: var(--ink, #1f2b33); stroke-width: 1.6; }
+  .comp { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.4; }
+  .flt { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.6; }
+  .note { fill: var(--bg, #f3f5f6); stroke: var(--muted, #5c6b75); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: var(--ink, #1f2b33); stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+  .trc { fill: none; stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; }
+  .dot { fill: var(--ink, #1f2b33); }
+  .ah { fill: var(--ink, #1f2b33); }
+  .ahc { fill: var(--sensor, #0f7f8c); }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--ink, #1f2b33); white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: var(--muted, #5c6b75); }
+  .ac { font-size: 11.5px; fill: var(--muted, #5c6b75); }
+  .lb { font-size: 12px; fill: var(--sensor, #0f7f8c); }
+  .lbk { font-size: 12px; fill: var(--ink, #1f2b33); }
+</style>
+<rect x="350" y="20" width="240" height="56" rx="6" class="st"/>
+<text x="470.0" y="44" text-anchor="middle" class="nm">Sorter</text>
+<text x="470.0" y="63" text-anchor="middle" class="ac">B1 photoSensor B3 B4</text>
+<rect x="60" y="160" width="220" height="56" rx="6" class="st"/>
+<text x="170.0" y="184" text-anchor="middle" class="nm">Conveyor</text>
+<text x="170.0" y="203" text-anchor="middle" class="ac">belt</text>
+<rect x="360" y="160" width="220" height="56" rx="6" class="st"/>
+<text x="470.0" y="184" text-anchor="middle" class="nm">Ejector 1</text>
+<text x="470.0" y="203" text-anchor="middle" class="ac">valve1 · S1 S2</text>
+<rect x="660" y="160" width="220" height="56" rx="6" class="st"/>
+<text x="770.0" y="184" text-anchor="middle" class="nm">Ejector 2</text>
+<text x="770.0" y="203" text-anchor="middle" class="ac">valve2 · S3 S4</text>
+<g class="trans">
+<path d="M370 76 L170 160" class="trc"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ahc" transform="translate(170 160) rotate(157.2)"/>
+<text x="250" y="108" text-anchor="end" class="lbk">run, stop</text>
+</g>
+<g class="trans">
+<path d="M450 76 L450 160" class="trc"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ahc" transform="translate(450 160) rotate(90.0)"/>
+<text x="440" y="124" text-anchor="end" class="lbk">push</text>
+</g>
+<g class="trans">
+<path d="M490 160 L490 76" class="trc"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ahc" transform="translate(490 76) rotate(-90.0)"/>
+<text x="500" y="124" text-anchor="start" class="lbk">done</text>
+</g>
+<g class="trans">
+<path d="M570 76 L750 160" class="trc"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ahc" transform="translate(750 160) rotate(25.0)"/>
+<text x="655" y="142" text-anchor="end" class="lbk">push</text>
+</g>
+<g class="trans">
+<path d="M790 160 L610 76" class="trc"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ahc" transform="translate(610 76) rotate(-155.0)"/>
+<text x="720" y="102" text-anchor="start" class="lbk">done</text>
+</g>
+</svg></div>
+  </section>
+
+  <section>
+    <h2>Sorter</h2>
+    <p>Follows one part from the entry to its bin. The colour read by the photoSensor decides the target. In ToEjector the machine waits for the sensor of <em>its</em> ejector, so a blue part simply passes B3. Bin 3 has no sensor, so ToEnd uses a timeout.</p>
+    <div class="sheet w1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 380" role="img" aria-label="Sorter state machine"><style>
+  .st { fill: var(--sheet, #ffffff); stroke: var(--ink, #1f2b33); stroke-width: 1.6; }
+  .comp { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.4; }
+  .flt { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.6; }
+  .note { fill: var(--bg, #f3f5f6); stroke: var(--muted, #5c6b75); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: var(--ink, #1f2b33); stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+  .trc { fill: none; stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; }
+  .dot { fill: var(--ink, #1f2b33); }
+  .ah { fill: var(--ink, #1f2b33); }
+  .ahc { fill: var(--sensor, #0f7f8c); }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--ink, #1f2b33); white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: var(--muted, #5c6b75); }
+  .ac { font-size: 11.5px; fill: var(--muted, #5c6b75); }
+  .lb { font-size: 12px; fill: var(--sensor, #0f7f8c); }
+  .lbk { font-size: 12px; fill: var(--ink, #1f2b33); }
+</style>
+<circle cx="35" cy="91" r="7" class="dot"/>
+<g id="t-so-init" class="trans">
+<path d="M42 91 L70 91" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(70 91) rotate(0.0)"/>
+</g>
+<g id="s-so-WaitPart" class="state">
+<rect x="70" y="55" width="230" height="72" rx="12" class="st"/>
+<text x="185.0" y="76" text-anchor="middle" class="nm">WaitPart</text>
+<line x1="70" y1="85" x2="300" y2="85" class="div"/>
+<text x="82" y="103" class="ac">entry / conveyor.stop</text>
+</g>
+<g id="s-so-ToSensor" class="state">
+<rect x="480" y="55" width="200" height="72" rx="12" class="st"/>
+<text x="580.0" y="76" text-anchor="middle" class="nm">ToSensor</text>
+<line x1="480" y1="85" x2="680" y2="85" class="div"/>
+<text x="492" y="103" class="ac">entry / conveyor.run</text>
+</g>
+<g id="t-so-b1" class="trans">
+<path d="M300 91 L480 91" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 91) rotate(0.0)"/>
+<text x="390" y="83" text-anchor="middle" class="lb">B1 ↑</text>
+</g>
+<path d="M580 189 L596 205 L580 221 L564 205 z" class="st"/>
+<g id="t-so-b2" class="trans">
+<path d="M580 127 L580 189" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(580 189) rotate(90.0)"/>
+<text x="590" y="160" text-anchor="start" class="lb">photoSensor colour c / target := binFor(c)</text>
+</g>
+<g id="s-so-ToEnd" class="state">
+<rect x="740" y="170" width="200" height="70" rx="12" class="st"/>
+<text x="840.0" y="191" text-anchor="middle" class="nm">ToEnd</text>
+<line x1="740" y1="200" x2="940" y2="200" class="div"/>
+<text x="752" y="218" class="ac">do / let part run off</text>
+</g>
+<g id="t-so-toEnd" class="trans">
+<path d="M596 205 L740 205" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(740 205) rotate(0.0)"/>
+<text x="668" y="197" text-anchor="middle" class="lb">[target = none]</text>
+</g>
+<g id="s-so-ToEjector" class="state">
+<rect x="480" y="290" width="200" height="72" rx="12" class="st"/>
+<text x="580.0" y="311" text-anchor="middle" class="nm">ToEjector</text>
+<line x1="480" y1="320" x2="680" y2="320" class="div"/>
+<text x="492" y="338" class="ac">(belt keeps running)</text>
+</g>
+<g id="t-so-toEj" class="trans">
+<path d="M580 221 L580 290" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(580 290) rotate(90.0)"/>
+<text x="590" y="262" text-anchor="start" class="lb">[target = 1 or 2]</text>
+</g>
+<g id="s-so-Ejecting" class="state">
+<rect x="70" y="290" width="230" height="72" rx="12" class="st"/>
+<text x="185.0" y="311" text-anchor="middle" class="nm">Ejecting</text>
+<line x1="70" y1="320" x2="300" y2="320" class="div"/>
+<text x="82" y="338" class="ac">entry / conveyor.stop</text>
+<text x="82" y="354" class="ac">entry / ejector[target].push</text>
+</g>
+<g id="t-so-atEj1" class="trans">
+<path d="M480 312 L300 312" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(300 312) rotate(180.0)"/>
+<text x="390" y="304" text-anchor="middle" class="lb">B3 ↑ [target = 1]</text>
+</g>
+<g id="t-so-atEj2" class="trans">
+<path d="M480 344 L300 344" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(300 344) rotate(180.0)"/>
+<text x="390" y="362" text-anchor="middle" class="lb">B4 ↑ [target = 2]</text>
+</g>
+<g id="t-so-done" class="trans">
+<path d="M185 290 L185 127" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(185 127) rotate(-90.0)"/>
+<text x="195" y="212" text-anchor="start" class="lb">ejector[target].done</text>
+</g>
+<g id="t-so-end" class="trans">
+<path d="M925 170 L925 30 L185 30 L185 55" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(185 55) rotate(90.0)"/>
+<text x="550" y="22" text-anchor="middle" class="lb">after(6 s)</text>
+</g>
+</svg></div>
+  </section>
+
+  <section>
+    <h2>Ejector (two instances)</h2>
+    <p>One generic definition, used twice: Ejector 1 with <code>valve = valve1</code>, <code>S_in = S1</code>, <code>S_out = S2</code>; Ejector 2 with <code>valve2</code>, <code>S3</code>, <code>S4</code>. It retracts by itself once the cylinder is fully out, then reports <code>done</code>.</p>
+    <div class="sheet w1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 350" role="img" aria-label="Ejector state machine (valve)"><style>
+  .st { fill: var(--sheet, #ffffff); stroke: var(--ink, #1f2b33); stroke-width: 1.6; }
+  .comp { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.4; }
+  .flt { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.6; }
+  .note { fill: var(--bg, #f3f5f6); stroke: var(--muted, #5c6b75); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: var(--ink, #1f2b33); stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+  .trc { fill: none; stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; }
+  .dot { fill: var(--ink, #1f2b33); }
+  .ah { fill: var(--ink, #1f2b33); }
+  .ahc { fill: var(--sensor, #0f7f8c); }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--ink, #1f2b33); white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: var(--muted, #5c6b75); }
+  .ac { font-size: 11.5px; fill: var(--muted, #5c6b75); }
+  .lb { font-size: 12px; fill: var(--sensor, #0f7f8c); }
+  .lbk { font-size: 12px; fill: var(--ink, #1f2b33); }
+</style>
+<circle cx="25" cy="115" r="7" class="dot"/>
+<g id="t-ej-init" class="trans">
+<path d="M32 115 L60 115" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(60 115) rotate(0.0)"/>
+</g>
+<g id="s-ej-Retracted" class="state">
+<rect x="60" y="80" width="210" height="70" rx="12" class="st"/>
+<text x="165.0" y="101" text-anchor="middle" class="nm">Retracted</text>
+<line x1="60" y1="110" x2="270" y2="110" class="div"/>
+<text x="72" y="128" class="ac">entry / valve := 0</text>
+</g>
+<g id="s-ej-Extending" class="state">
+<rect x="480" y="80" width="210" height="70" rx="12" class="st"/>
+<text x="585.0" y="101" text-anchor="middle" class="nm">Extending</text>
+<line x1="480" y1="110" x2="690" y2="110" class="div"/>
+<text x="492" y="128" class="ac">entry / valve := 1</text>
+</g>
+<g id="s-ej-Retracting" class="state">
+<rect x="270" y="260" width="210" height="70" rx="12" class="st"/>
+<text x="375.0" y="281" text-anchor="middle" class="nm">Retracting</text>
+<line x1="270" y1="290" x2="480" y2="290" class="div"/>
+<text x="282" y="308" class="ac">entry / valve := 0</text>
+</g>
+<g id="t-ej-push" class="trans">
+<path d="M270 115 L480 115" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 115) rotate(0.0)"/>
+<text x="375" y="107" text-anchor="middle" class="lb">push</text>
+</g>
+<g id="t-ej-out" class="trans">
+<path d="M585 150 L585 295 L480 295" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 295) rotate(180.0)"/>
+<text x="595" y="225" text-anchor="start" class="lb">when(S_out)</text>
+</g>
+<g id="t-ej-in" class="trans">
+<path d="M270 295 L165 295 L165 150" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(165 150) rotate(-90.0)"/>
+<text x="175" y="225" text-anchor="start" class="lb">when(S_in) / send done</text>
+</g>
+</svg></div>
+  </section>
+
+  <section>
+    <h2>Conveyor</h2>
+    <p>The smallest machine. A good first exercise, and it shows why the sorter sends commands instead of switching the belt directly.</p>
+    <div class="sheet w2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 200" role="img" aria-label="Conveyor state machine"><style>
+  .st { fill: var(--sheet, #ffffff); stroke: var(--ink, #1f2b33); stroke-width: 1.6; }
+  .comp { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.4; }
+  .flt { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.6; }
+  .note { fill: var(--bg, #f3f5f6); stroke: var(--muted, #5c6b75); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: var(--ink, #1f2b33); stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+  .trc { fill: none; stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; }
+  .dot { fill: var(--ink, #1f2b33); }
+  .ah { fill: var(--ink, #1f2b33); }
+  .ahc { fill: var(--sensor, #0f7f8c); }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--ink, #1f2b33); white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: var(--muted, #5c6b75); }
+  .ac { font-size: 11.5px; fill: var(--muted, #5c6b75); }
+  .lb { font-size: 12px; fill: var(--sensor, #0f7f8c); }
+  .lbk { font-size: 12px; fill: var(--ink, #1f2b33); }
+</style>
+<g id="s-cv-Stopped" class="state">
+<rect x="60" y="40" width="170" height="70" rx="12" class="st"/>
+<text x="145.0" y="61" text-anchor="middle" class="nm">Stopped</text>
+<line x1="60" y1="70" x2="230" y2="70" class="div"/>
+<text x="72" y="88" class="ac">entry / belt := 0</text>
+</g>
+<g id="s-cv-Running" class="state">
+<rect x="330" y="40" width="170" height="70" rx="12" class="st"/>
+<text x="415.0" y="61" text-anchor="middle" class="nm">Running</text>
+<line x1="330" y1="70" x2="500" y2="70" class="div"/>
+<text x="342" y="88" class="ac">entry / belt := 1</text>
+</g>
+<g id="t-cv-run" class="trans">
+<path d="M230 64 L330 64" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(330 64) rotate(0.0)"/>
+<text x="280" y="56" text-anchor="middle" class="lb">run</text>
+</g>
+<g id="t-cv-stop" class="trans">
+<path d="M330 94 L230 94" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(230 94) rotate(180.0)"/>
+<text x="280" y="110" text-anchor="middle" class="lb">stop</text>
+</g>
+<circle cx="145" cy="175" r="7" class="dot"/>
+<g id="t-cv-init" class="trans">
+<path d="M145 168 L145 110" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(145 110) rotate(-90.0)"/>
+</g>
+</svg></div>
+  </section>
+
+  <section>
+    <h2>Ideas for follow-up exercises</h2>
+    <ul>
+      <li>Add timeouts to the ejector: what happens if a cylinder gets stuck?</li>
+      <li>Add a start and stop button: which machine should own them?</li>
+      <li>Allow several parts on the belt: keep a queue of targets instead of one variable.</li>
+      <li>Implement the machines in IEC 61131-3 (CASE statement or SFC) and test them against a simulation.</li>
+    </ul>
+  </section>
+</main>
