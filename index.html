@@ -1,1 +1,832 @@
-sorting_station.html
+<title>Sorting Station Simulator v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  /* Layout: sticky control deck (toolbar, live schematic, operator side panel, state chips) above a scrolling grid of state diagrams */
+  :root {
+    --bg: #f3f5f6; --sheet: #ffffff; --ink: #1f2b33; --muted: #5c6b75; --rule: #d3dade;
+    --belt: #c9d1d6; --sensor: #0f7f8c; --sensor-tint: #e0f2f4; --act: #b86a00; --act-tint: #fbefdc;
+    --red: #d1453b; --blue: #2f6fd0; --white: #fbfbf8; --hl: #c9ecef;
+    --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #12181c; --sheet: #182127; --ink: #dfe7ec; --muted: #94a3ad; --rule: #2e3a42;
+    --belt: #34424b; --sensor: #4cc3d0; --sensor-tint: #143238; --act: #f0a640; --act-tint: #3a2a12;
+    --red: #e8665c; --blue: #5d93ea; --white: #e9ebe6; --hl: #1d4a50; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #12181c; --sheet: #182127; --ink: #dfe7ec; --muted: #94a3ad; --rule: #2e3a42;
+    --belt: #34424b; --sensor: #4cc3d0; --sensor-tint: #143238; --act: #f0a640; --act-tint: #3a2a12;
+    --red: #e8665c; --blue: #5d93ea; --white: #e9ebe6; --hl: #1d4a50; color-scheme: dark }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.45;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 40px; }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+  .wrap { max-width: 1500px; margin: 0 auto; }
+  .deck { background: var(--bg); padding-block: 12px 10px; border-bottom: 1px solid var(--rule); display: grid; gap: 10px; z-index: 5; }
+  @media (min-width: 1000px) and (min-height: 760px) { .deck { position: sticky; top: env(safe-area-inset-top, 0px); } }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+  h1 { font-size: 1.25rem; margin: 0; text-wrap: balance; }
+  .ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  button, select { font: inherit; font-size: 13px; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--ink); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--sensor); outline-offset: 2px; }
+  button:disabled { opacity: .45; cursor: default; }
+  button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); min-width: 6.5em; font-weight: 600; }
+  label { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+  #clock { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 8em; }
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 12px; align-items: start; }
+  @media (max-width: 820px) { .stage { grid-template-columns: 1fr; } }
+  .sch { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; overflow-x: auto; display: flex; justify-content: center; }
+  .sch svg { display: block; width: 100%; height: auto; max-height: 40vh; min-width: 560px; }
+  .side { display: grid; gap: 10px; min-width: 0; }
+  .grp { display: grid; gap: 6px; }
+  .grp h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0; }
+  .btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .btns button { padding: 5px 4px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--ink); margin-right: 5px; vertical-align: -1px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-family: var(--mono); font-size: 12px; border: 1px solid var(--rule); border-radius: 999px; padding: 2px 10px; background: var(--sheet); }
+  .chip b { font-family: var(--sans); font-weight: 600; margin-right: 6px; }
+  .hint { color: var(--muted); font-size: 12px; margin: 0; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 14px; }
+  @media (min-width: 1150px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .card { background: var(--sheet); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px 12px; display: grid; gap: 6px; min-width: 0; align-content: start; }
+  .card h2 { font-size: 14px; margin: 0; display: flex; justify-content: space-between; gap: 8px; }
+  .card h2 span { font-family: var(--mono); font-weight: 400; font-size: 12px; color: var(--muted); }
+  .dg { overflow-x: auto; }
+  .dg svg { display: block; width: 100%; height: auto; min-width: 480px; }
+  .dg.small svg { max-width: 460px; min-width: 380px; margin: 0 auto; }
+  /* live state highlighting inside the diagrams */
+  .state > rect, .state > text, .trans path, .trans text, .trans rect { transition: fill .5s, stroke .5s, stroke-width .5s; }
+  .state.active > rect { fill: var(--hl); stroke: var(--sensor); stroke-width: 3.2; }
+  .trans.flash path { stroke: var(--act); stroke-width: 3.5; }
+  .trans.flash path.ah, .trans.flash path.ahc { fill: var(--act); stroke-width: 1; }
+  .trans.flash text { fill: var(--act); font-weight: 600; }
+  .trans.flash rect { stroke: var(--act); stroke-width: 2.5; }
+  @media (prefers-reduced-motion: reduce) { .state > rect, .trans path, .trans text { transition: none; } }
+</style>
+
+<div class="wrap">
+  <div class="deck">
+    <div class="bar">
+      <h1>Sorting Station Simulator</h1>
+      <div class="ctrl">
+        <button id="play" class="primary">▶ Start</button>
+        <button id="next" title="Run until the next state transition">Next transition</button>
+        <button id="reset" title="Switch the machine off and on again">Reset</button>
+        <label for="speed">Speed
+          <select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+        </label>
+        <label><input type="checkbox" id="demo" checked> Demo operator</label>
+        <span id="clock">t = 0.00 s</span>
+      </div>
+    </div>
+    <div class="stage">
+      <div class="sch"><svg id="sch" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 545" role="img" aria-label="Top-view schematic of a conveyor sorting station with colour sensor, two pneumatic ejectors and three bins">
+  <style>
+    #sch .ln { stroke: var(--ink, #1f2b33); stroke-width: 1.5; fill: none; }
+    #sch .st { stroke: var(--ink, #1f2b33); stroke-width: 1.5; fill: var(--sheet, #ffffff); }
+    #sch .belt { fill: var(--belt, #c9d1d6); stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+    #sch .slat { stroke: var(--ink, #1f2b33); stroke-opacity: .18; stroke-width: 1; }
+    #sch .sens { fill: var(--sensor-tint, #e0f2f4); stroke: var(--sensor, #0f7f8c); stroke-width: 1.8; }
+    #sch .act { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.8; }
+    #sch .actl { stroke: var(--act, #b86a00); stroke-width: 1.8; fill: none; }
+    #sch .beam { stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
+    #sch .ghost { stroke: var(--act, #b86a00); stroke-width: 1.2; stroke-dasharray: 4 3; fill: none; }
+    #sch .air { stroke: var(--muted, #5c6b75); stroke-width: 2; fill: none; }
+    #sch text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--muted, #5c6b75); }
+    #sch .ts { fill: var(--sensor, #0f7f8c); font-weight: 600; font-size: 13px; }
+    #sch .ta { fill: var(--act, #b86a00); font-weight: 600; font-size: 13px; }
+    #sch .tk { fill: var(--ink, #1f2b33); font-weight: 600; font-size: 13px; }
+    #sch .pr { fill: var(--red, #d1453b); stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+    #sch .pb { fill: var(--blue, #2f6fd0); stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+    #sch .pw { fill: var(--white, #fbfbf8); stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+    #sch .fillink { fill: var(--ink, #1f2b33); }
+    #sch .fillmuted { fill: var(--muted, #5c6b75); }
+    #sch .fillact { fill: var(--act, #b86a00); }
+    #sch .on .sens, #sch .sens.on { fill: var(--sensor, #0f7f8c); }
+    #sch .on .act, #sch .act.on { fill: var(--act, #b86a00); }
+    #sch .on .beam { stroke-dasharray: none; stroke-width: 2.5; }
+  </style>
+  <defs>
+    <marker id="sch-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" class="fillink"/>
+    </marker>
+    <marker id="sch-arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" class="fillact"/>
+    </marker>
+    <clipPath id="beltclip"><rect x="110" y="230" width="750" height="80"/></clipPath>
+  </defs>
+
+  <!-- compressed air supply -->
+  <circle cx="300" cy="46" r="10" class="st"/>
+  <path d="M296 41 L305 46 L296 51 z" class="fillmuted"/>
+  <text x="200" y="30">compressed air 6 bar</text>
+  <path d="M310 46 H630 M430 46 V105 M630 46 V105" class="air"/>
+
+  <!-- belt -->
+  <rect x="110" y="230" width="750" height="80" class="belt"/>
+  <g clip-path="url(#beltclip)"><path id="slats" class="slat" d="M80 230v80M110 230v80M140 230v80M170 230v80M200 230v80M230 230v80M260 230v80M290 230v80M320 230v80M350 230v80M380 230v80M410 230v80M440 230v80M470 230v80M500 230v80M530 230v80M560 230v80M590 230v80M620 230v80M650 230v80M680 230v80M710 230v80M740 230v80M770 230v80M800 230v80M830 230v80M860 230v80"/></g>
+  <rect x="100" y="224" width="20" height="92" rx="6" class="st"/>
+  <rect x="850" y="224" width="20" height="92" rx="6" class="st"/>
+  <line x1="760" y1="214" x2="840" y2="214" class="ln" marker-end="url(#sch-arr)"/>
+  <text x="762" y="206">transport</text>
+
+  <!-- belt motor -->
+  <g id="m1">
+    <line x1="110" y1="224" x2="110" y2="180" class="actl"/>
+    <rect x="82" y="140" width="56" height="40" rx="4" class="act"/>
+    <circle cx="110" cy="160" r="13" class="act"/>
+  </g>
+  <text x="104" y="165" class="tk" style="font-size:12px">M</text>
+  <text x="70" y="118" class="ta">belt</text>
+  <text x="108" y="118">motor</text>
+
+  <!-- B1 entry light barrier -->
+  <g id="b1">
+    <rect x="144" y="212" width="12" height="12" class="sens"/>
+    <rect x="144" y="316" width="12" height="12" class="sens"/>
+    <line x1="150" y1="224" x2="150" y2="316" class="beam"/>
+  </g>
+  <text x="128" y="350" class="ts">B1</text>
+  <text x="128" y="366">part at entry</text>
+  <text x="128" y="400" class="tk">▲ insert part</text>
+
+  <!-- photoSensor (colour) -->
+  <g id="b2">
+    <rect x="276" y="150" width="48" height="36" rx="4" class="sens"/>
+    <circle id="b2lens" cx="300" cy="168" r="8" class="sens"/>
+    <path d="M292 186 L278 256 M308 186 L322 256" class="beam"/>
+  </g>
+  <text x="246" y="122" class="ts">photoSensor</text>
+  <text x="246" y="138">reads colour</text>
+
+  <!-- ejector 1 (red) -->
+  <g id="y1"><rect x="405" y="105" width="50" height="28" class="act"/><rect x="393" y="110" width="12" height="18" class="act"/></g>
+  <path d="M455 112 H466 V90 H478 M455 126 H466 V165 H478" class="air"/>
+  <text x="388" y="124" text-anchor="end" class="ta">valve1</text>
+  <rect x="478" y="70" width="44" height="110" rx="3" class="act"/>
+  <line x1="480" y1="100" x2="520" y2="100" class="actl"/>
+  <rect x="470" y="300" width="60" height="8" class="ghost"/>
+  <line x1="540" y1="226" x2="540" y2="296" class="ghost" marker-end="url(#sch-arrA)"/>
+  <line id="rod1" x1="500" y1="100" x2="500" y2="212" class="actl" style="stroke-width:4"/>
+  <rect id="plate1" x="470" y="212" width="60" height="8" class="act"/>
+  <rect id="s1" x="522" y="78" width="12" height="10" class="sens"/>
+  <rect id="s2" x="522" y="160" width="12" height="10" class="sens"/>
+  <text x="540" y="87" class="ts">S1</text><text x="560" y="87">in</text>
+  <text x="540" y="169" class="ts">S2</text><text x="560" y="169">out</text>
+  <g id="b3"><rect x="494" y="316" width="12" height="10" class="sens"/><line x1="500" y1="316" x2="500" y2="294" class="beam"/></g>
+  <text x="488" y="326" text-anchor="end" class="ts">B3</text>
+  <path d="M466 332 V412 H534 V332" class="st"/>
+  <text x="466" y="432" class="tk">Bin 1</text><text x="466" y="448">red</text>
+  <text id="bin1n" x="534" y="432" text-anchor="end"></text>
+
+  <!-- ejector 2 (blue) -->
+  <g id="y2"><rect x="605" y="105" width="50" height="28" class="act"/><rect x="593" y="110" width="12" height="18" class="act"/></g>
+  <path d="M655 112 H666 V90 H678 M655 126 H666 V165 H678" class="air"/>
+  <text x="588" y="124" text-anchor="end" class="ta">valve2</text>
+  <rect x="678" y="70" width="44" height="110" rx="3" class="act"/>
+  <line x1="680" y1="100" x2="720" y2="100" class="actl"/>
+  <rect x="670" y="300" width="60" height="8" class="ghost"/>
+  <line x1="740" y1="226" x2="740" y2="296" class="ghost" marker-end="url(#sch-arrA)"/>
+  <line id="rod2" x1="700" y1="100" x2="700" y2="212" class="actl" style="stroke-width:4"/>
+  <rect id="plate2" x="670" y="212" width="60" height="8" class="act"/>
+  <rect id="s3" x="722" y="78" width="12" height="10" class="sens"/>
+  <rect id="s4" x="722" y="160" width="12" height="10" class="sens"/>
+  <text x="740" y="87" class="ts">S3</text><text x="760" y="87">in</text>
+  <text x="740" y="169" class="ts">S4</text><text x="760" y="169">out</text>
+  <g id="b4"><rect x="694" y="316" width="12" height="10" class="sens"/><line x1="700" y1="316" x2="700" y2="294" class="beam"/></g>
+  <text x="688" y="326" text-anchor="end" class="ts">B4</text>
+  <path d="M666 332 V412 H734 V332" class="st"/>
+  <text x="666" y="432" class="tk">Bin 2</text><text x="666" y="448">blue</text>
+  <text id="bin2n" x="734" y="432" text-anchor="end"></text>
+
+  <!-- bin 3 at belt end -->
+  <path d="M884 228 H960 V312 H884" class="st"/>
+  <text x="884" y="336" class="tk">Bin 3</text><text x="884" y="352">other</text>
+  <text id="bin3n" x="960" y="336" text-anchor="end"></text>
+
+  <!-- parts (drawn above everything on the machine) -->
+  <g id="parts"></g>
+
+  <!-- controller -->
+  <rect x="40" y="466" width="420" height="70" rx="6" class="st"/>
+  <text x="54" y="488" class="tk">Controller (PLC)</text>
+  <text x="54" y="508"><tspan class="ts" style="font-size:12px">DI</tspan>  B1, photoSensor, B3, B4, S1–S4</text>
+  <text x="54" y="526"><tspan class="ta" style="font-size:12px">DO</tspan>  belt, valve1, valve2</text>
+</svg>
+</div>
+      <aside class="side">
+        <div class="grp">
+          <h2>Place a part at the entry</h2>
+          <div class="btns">
+            <button data-part="red"><span class="sw" style="background:var(--red)"></span>Red</button>
+            <button data-part="blue"><span class="sw" style="background:var(--blue)"></span>Blue</button>
+            <button data-part="white"><span class="sw" style="background:var(--white)"></span>White</button>
+          </div>
+          <p class="hint">One part at a time: the buttons work while the sorter waits in WaitPart.</p>
+        </div>
+      </aside>
+    </div>
+    <div id="chips" class="chips" aria-live="polite"></div>
+  </div>
+
+  <div class="grid">
+    <section class="card"><h2>Sorter <span>B1 · photoSensor · B3 B4</span></h2><div class="dg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 380" role="img" aria-label="Sorter state machine"><style>
+  .st { fill: var(--sheet, #ffffff); stroke: var(--ink, #1f2b33); stroke-width: 1.6; }
+  .comp { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.4; }
+  .flt { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.6; }
+  .note { fill: var(--bg, #f3f5f6); stroke: var(--muted, #5c6b75); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: var(--ink, #1f2b33); stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+  .trc { fill: none; stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; }
+  .dot { fill: var(--ink, #1f2b33); }
+  .ah { fill: var(--ink, #1f2b33); }
+  .ahc { fill: var(--sensor, #0f7f8c); }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--ink, #1f2b33); white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: var(--muted, #5c6b75); }
+  .ac { font-size: 11.5px; fill: var(--muted, #5c6b75); }
+  .lb { font-size: 12px; fill: var(--sensor, #0f7f8c); }
+  .lbk { font-size: 12px; fill: var(--ink, #1f2b33); }
+</style>
+<circle cx="35" cy="91" r="7" class="dot"/>
+<g id="t-so-init" class="trans">
+<path d="M42 91 L70 91" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(70 91) rotate(0.0)"/>
+</g>
+<g id="s-so-WaitPart" class="state">
+<rect x="70" y="55" width="230" height="72" rx="12" class="st"/>
+<text x="185.0" y="76" text-anchor="middle" class="nm">WaitPart</text>
+<line x1="70" y1="85" x2="300" y2="85" class="div"/>
+<text x="82" y="103" class="ac">entry / conveyor.stop</text>
+</g>
+<g id="s-so-ToSensor" class="state">
+<rect x="480" y="55" width="200" height="72" rx="12" class="st"/>
+<text x="580.0" y="76" text-anchor="middle" class="nm">ToSensor</text>
+<line x1="480" y1="85" x2="680" y2="85" class="div"/>
+<text x="492" y="103" class="ac">entry / conveyor.run</text>
+</g>
+<g id="t-so-b1" class="trans">
+<path d="M300 91 L480 91" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 91) rotate(0.0)"/>
+<text x="390" y="83" text-anchor="middle" class="lb">B1 ↑</text>
+</g>
+<path d="M580 189 L596 205 L580 221 L564 205 z" class="st"/>
+<g id="t-so-b2" class="trans">
+<path d="M580 127 L580 189" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(580 189) rotate(90.0)"/>
+<text x="590" y="160" text-anchor="start" class="lb">photoSensor colour c / target := binFor(c)</text>
+</g>
+<g id="s-so-ToEnd" class="state">
+<rect x="740" y="170" width="200" height="70" rx="12" class="st"/>
+<text x="840.0" y="191" text-anchor="middle" class="nm">ToEnd</text>
+<line x1="740" y1="200" x2="940" y2="200" class="div"/>
+<text x="752" y="218" class="ac">do / let part run off</text>
+</g>
+<g id="t-so-toEnd" class="trans">
+<path d="M596 205 L740 205" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(740 205) rotate(0.0)"/>
+<text x="668" y="197" text-anchor="middle" class="lb">[target = none]</text>
+</g>
+<g id="s-so-ToEjector" class="state">
+<rect x="480" y="290" width="200" height="72" rx="12" class="st"/>
+<text x="580.0" y="311" text-anchor="middle" class="nm">ToEjector</text>
+<line x1="480" y1="320" x2="680" y2="320" class="div"/>
+<text x="492" y="338" class="ac">(belt keeps running)</text>
+</g>
+<g id="t-so-toEj" class="trans">
+<path d="M580 221 L580 290" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(580 290) rotate(90.0)"/>
+<text x="590" y="262" text-anchor="start" class="lb">[target = 1 or 2]</text>
+</g>
+<g id="s-so-Ejecting" class="state">
+<rect x="70" y="290" width="230" height="72" rx="12" class="st"/>
+<text x="185.0" y="311" text-anchor="middle" class="nm">Ejecting</text>
+<line x1="70" y1="320" x2="300" y2="320" class="div"/>
+<text x="82" y="338" class="ac">entry / conveyor.stop</text>
+<text x="82" y="354" class="ac">entry / ejector[target].push</text>
+</g>
+<g id="t-so-atEj1" class="trans">
+<path d="M480 312 L300 312" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(300 312) rotate(180.0)"/>
+<text x="390" y="304" text-anchor="middle" class="lb">B3 ↑ [target = 1]</text>
+</g>
+<g id="t-so-atEj2" class="trans">
+<path d="M480 344 L300 344" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(300 344) rotate(180.0)"/>
+<text x="390" y="362" text-anchor="middle" class="lb">B4 ↑ [target = 2]</text>
+</g>
+<g id="t-so-done" class="trans">
+<path d="M185 290 L185 127" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(185 127) rotate(-90.0)"/>
+<text x="195" y="212" text-anchor="start" class="lb">ejector[target].done</text>
+</g>
+<g id="t-so-end" class="trans">
+<path d="M925 170 L925 30 L185 30 L185 55" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(185 55) rotate(90.0)"/>
+<text x="550" y="22" text-anchor="middle" class="lb">after(6 s)</text>
+</g>
+</svg></div></section>
+    <section class="card"><h2>Conveyor <span>belt</span></h2><div class="dg small"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 200" role="img" aria-label="Conveyor state machine"><style>
+  .st { fill: var(--sheet, #ffffff); stroke: var(--ink, #1f2b33); stroke-width: 1.6; }
+  .comp { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.4; }
+  .flt { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.6; }
+  .note { fill: var(--bg, #f3f5f6); stroke: var(--muted, #5c6b75); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: var(--ink, #1f2b33); stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+  .trc { fill: none; stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; }
+  .dot { fill: var(--ink, #1f2b33); }
+  .ah { fill: var(--ink, #1f2b33); }
+  .ahc { fill: var(--sensor, #0f7f8c); }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--ink, #1f2b33); white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: var(--muted, #5c6b75); }
+  .ac { font-size: 11.5px; fill: var(--muted, #5c6b75); }
+  .lb { font-size: 12px; fill: var(--sensor, #0f7f8c); }
+  .lbk { font-size: 12px; fill: var(--ink, #1f2b33); }
+</style>
+<g id="s-cv-Stopped" class="state">
+<rect x="60" y="40" width="170" height="70" rx="12" class="st"/>
+<text x="145.0" y="61" text-anchor="middle" class="nm">Stopped</text>
+<line x1="60" y1="70" x2="230" y2="70" class="div"/>
+<text x="72" y="88" class="ac">entry / belt := 0</text>
+</g>
+<g id="s-cv-Running" class="state">
+<rect x="330" y="40" width="170" height="70" rx="12" class="st"/>
+<text x="415.0" y="61" text-anchor="middle" class="nm">Running</text>
+<line x1="330" y1="70" x2="500" y2="70" class="div"/>
+<text x="342" y="88" class="ac">entry / belt := 1</text>
+</g>
+<g id="t-cv-run" class="trans">
+<path d="M230 64 L330 64" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(330 64) rotate(0.0)"/>
+<text x="280" y="56" text-anchor="middle" class="lb">run</text>
+</g>
+<g id="t-cv-stop" class="trans">
+<path d="M330 94 L230 94" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(230 94) rotate(180.0)"/>
+<text x="280" y="110" text-anchor="middle" class="lb">stop</text>
+</g>
+<circle cx="145" cy="175" r="7" class="dot"/>
+<g id="t-cv-init" class="trans">
+<path d="M145 168 L145 110" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(145 110) rotate(-90.0)"/>
+</g>
+</svg></div></section>
+    <section class="card"><h2>Ejector 1 <span>valve1 · S1 S2</span></h2><div class="dg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 66 700 276" role="img" aria-label="Ejector state machine (valve1)"><style>
+  .st { fill: var(--sheet, #ffffff); stroke: var(--ink, #1f2b33); stroke-width: 1.6; }
+  .comp { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.4; }
+  .flt { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.6; }
+  .note { fill: var(--bg, #f3f5f6); stroke: var(--muted, #5c6b75); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: var(--ink, #1f2b33); stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+  .trc { fill: none; stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; }
+  .dot { fill: var(--ink, #1f2b33); }
+  .ah { fill: var(--ink, #1f2b33); }
+  .ahc { fill: var(--sensor, #0f7f8c); }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--ink, #1f2b33); white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: var(--muted, #5c6b75); }
+  .ac { font-size: 11.5px; fill: var(--muted, #5c6b75); }
+  .lb { font-size: 12px; fill: var(--sensor, #0f7f8c); }
+  .lbk { font-size: 12px; fill: var(--ink, #1f2b33); }
+</style>
+<circle cx="25" cy="115" r="7" class="dot"/>
+<g id="t-e1-init" class="trans">
+<path d="M32 115 L60 115" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(60 115) rotate(0.0)"/>
+</g>
+<g id="s-e1-Retracted" class="state">
+<rect x="60" y="80" width="210" height="70" rx="12" class="st"/>
+<text x="165.0" y="101" text-anchor="middle" class="nm">Retracted</text>
+<line x1="60" y1="110" x2="270" y2="110" class="div"/>
+<text x="72" y="128" class="ac">entry / valve1 := 0</text>
+</g>
+<g id="s-e1-Extending" class="state">
+<rect x="480" y="80" width="210" height="70" rx="12" class="st"/>
+<text x="585.0" y="101" text-anchor="middle" class="nm">Extending</text>
+<line x1="480" y1="110" x2="690" y2="110" class="div"/>
+<text x="492" y="128" class="ac">entry / valve1 := 1</text>
+</g>
+<g id="s-e1-Retracting" class="state">
+<rect x="270" y="260" width="210" height="70" rx="12" class="st"/>
+<text x="375.0" y="281" text-anchor="middle" class="nm">Retracting</text>
+<line x1="270" y1="290" x2="480" y2="290" class="div"/>
+<text x="282" y="308" class="ac">entry / valve1 := 0</text>
+</g>
+<g id="t-e1-push" class="trans">
+<path d="M270 115 L480 115" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 115) rotate(0.0)"/>
+<text x="375" y="107" text-anchor="middle" class="lb">push</text>
+</g>
+<g id="t-e1-out" class="trans">
+<path d="M585 150 L585 295 L480 295" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 295) rotate(180.0)"/>
+<text x="595" y="225" text-anchor="start" class="lb">when(S2)</text>
+</g>
+<g id="t-e1-in" class="trans">
+<path d="M270 295 L165 295 L165 150" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(165 150) rotate(-90.0)"/>
+<text x="175" y="225" text-anchor="start" class="lb">when(S1) / send done</text>
+</g>
+</svg></div></section>
+    <section class="card"><h2>Ejector 2 <span>valve2 · S3 S4</span></h2><div class="dg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10 66 700 276" role="img" aria-label="Ejector state machine (valve2)"><style>
+  .st { fill: var(--sheet, #ffffff); stroke: var(--ink, #1f2b33); stroke-width: 1.6; }
+  .comp { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.4; }
+  .flt { fill: var(--act-tint, #fbefdc); stroke: var(--act, #b86a00); stroke-width: 1.6; }
+  .note { fill: var(--bg, #f3f5f6); stroke: var(--muted, #5c6b75); stroke-width: 1.2; stroke-dasharray: 4 3; }
+  .div { stroke: var(--ink, #1f2b33); stroke-opacity: .35; stroke-width: 1; }
+  .tr { fill: none; stroke: var(--ink, #1f2b33); stroke-width: 1.5; }
+  .trc { fill: none; stroke: var(--sensor, #0f7f8c); stroke-width: 1.5; }
+  .dot { fill: var(--ink, #1f2b33); }
+  .ah { fill: var(--ink, #1f2b33); }
+  .ahc { fill: var(--sensor, #0f7f8c); }
+  text { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; fill: var(--ink, #1f2b33); white-space: pre; }
+  .nm { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 14px; }
+  .ttl { font-family: "IBM Plex Sans", system-ui, sans-serif; font-weight: 600; font-size: 13px; fill: var(--muted, #5c6b75); }
+  .ac { font-size: 11.5px; fill: var(--muted, #5c6b75); }
+  .lb { font-size: 12px; fill: var(--sensor, #0f7f8c); }
+  .lbk { font-size: 12px; fill: var(--ink, #1f2b33); }
+</style>
+<circle cx="25" cy="115" r="7" class="dot"/>
+<g id="t-e2-init" class="trans">
+<path d="M32 115 L60 115" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(60 115) rotate(0.0)"/>
+</g>
+<g id="s-e2-Retracted" class="state">
+<rect x="60" y="80" width="210" height="70" rx="12" class="st"/>
+<text x="165.0" y="101" text-anchor="middle" class="nm">Retracted</text>
+<line x1="60" y1="110" x2="270" y2="110" class="div"/>
+<text x="72" y="128" class="ac">entry / valve2 := 0</text>
+</g>
+<g id="s-e2-Extending" class="state">
+<rect x="480" y="80" width="210" height="70" rx="12" class="st"/>
+<text x="585.0" y="101" text-anchor="middle" class="nm">Extending</text>
+<line x1="480" y1="110" x2="690" y2="110" class="div"/>
+<text x="492" y="128" class="ac">entry / valve2 := 1</text>
+</g>
+<g id="s-e2-Retracting" class="state">
+<rect x="270" y="260" width="210" height="70" rx="12" class="st"/>
+<text x="375.0" y="281" text-anchor="middle" class="nm">Retracting</text>
+<line x1="270" y1="290" x2="480" y2="290" class="div"/>
+<text x="282" y="308" class="ac">entry / valve2 := 0</text>
+</g>
+<g id="t-e2-push" class="trans">
+<path d="M270 115 L480 115" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 115) rotate(0.0)"/>
+<text x="375" y="107" text-anchor="middle" class="lb">push</text>
+</g>
+<g id="t-e2-out" class="trans">
+<path d="M585 150 L585 295 L480 295" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(480 295) rotate(180.0)"/>
+<text x="595" y="225" text-anchor="start" class="lb">when(S4)</text>
+</g>
+<g id="t-e2-in" class="trans">
+<path d="M270 295 L165 295 L165 150" class="tr"/>
+<path d="M0 0 L-10 -4.5 L-10 4.5 z" class="ah" transform="translate(165 150) rotate(-90.0)"/>
+<text x="175" y="225" text-anchor="start" class="lb">when(S3) / send done</text>
+</g>
+</svg></div></section>
+  </div>
+</div>
+
+<script>
+"use strict";
+(() => {
+const $ = id => document.getElementById(id);
+const SVGNS = "http://www.w3.org/2000/svg";
+
+// ===================================================================
+// Simulation clock
+// ===================================================================
+const SIM = { t: 0, playing: false, speed: 1, demo: true, transitions: 0 };
+const DT = 0.005;                 // fixed simulation step in seconds
+
+// ===================================================================
+// Plant: the physical machine. It knows nothing about state machines.
+// It reads the outputs (belt, valve1, valve2) and produces the sensor signals.
+// ===================================================================
+const BELT_SPEED = 110;           // drawing units per second
+const STROKE_TIME = 0.6;          // seconds for a full cylinder stroke
+const CYL_X = [500, 700];         // centre line of ejector 1 and 2
+const BIN_MAX = 12;               // parts drawn per bin
+
+let P, SNS, prevSNS, slat;
+
+function newPlant() {
+  return {
+    belt: false, valve: [false, false],   // outputs, written by the state machines
+    s: [0, 0],                            // cylinder stroke 0 = in, 1 = out
+    parts: [], bins: [[], [], []], nextId: 1,
+  };
+}
+
+function plantStep(dt) {
+  if (P.belt) slat = (slat + BELT_SPEED * dt) % 30;
+  for (let k = 0; k < 2; k++) {
+    const dir = P.valve[k] ? 1 : -1;      // spring return when the valve is off
+    P.s[k] = Math.min(1, Math.max(0, P.s[k] + dir * dt / STROKE_TIME));
+  }
+  for (const p of P.parts) {
+    if (p.where === "belt") {
+      if (P.belt && p.y < 285) p.x += BELT_SPEED * dt;
+      for (let k = 0; k < 2 && p.where === "belt"; k++) {
+        const plateBottom = 220 + P.s[k] * 88;
+        if (Math.abs(p.x - CYL_X[k]) < 40 && plateBottom > p.y - 22) p.y = plateBottom + 22;
+        if (p.y >= 326) toBin(p, k);
+      }
+      if (p.where === "belt" && p.x > 872) toBin(p, 2);
+    } else if (p.where === "falling") {
+      const f = Math.min(1, dt * 12);
+      p.x += (p.tx - p.x) * f; p.y += (p.ty - p.y) * f; p.r += (9 - p.r) * f;
+      if (Math.hypot(p.tx - p.x, p.ty - p.y) < 0.5) p.where = "bin";
+    }
+  }
+}
+
+function toBin(p, k) {
+  const bin = P.bins[k];
+  bin.push(p);
+  if (bin.length > BIN_MAX) {                     // keep the drawing tidy: drop the oldest part
+    const old = bin.splice(0, bin.length - BIN_MAX);
+    P.parts = P.parts.filter(q => !old.includes(q));
+  }
+  const slot = (bin.count = (bin.count || 0) + 1) - 1;
+  p.where = "falling";
+  if (k < 2) { p.tx = CYL_X[k] + ((slot % 3) - 1) * 19; p.ty = 400 - Math.floor((slot % BIN_MAX) / 3) * 19; }
+  else       { p.tx = 902 + (slot % 3) * 20;            p.ty = 296 - Math.floor((slot % BIN_MAX) / 3) * 20; }
+}
+
+function readSensors() {
+  const onBelt = P.parts.filter(p => p.where === "belt" && p.y < 292);
+  const near = (x, w) => onBelt.find(p => Math.abs(p.x - x) < w);
+  const c = near(300, 6);
+  return {
+    B1: !!near(150, 22),             // light barrier at the entry
+    photoSensor: c ? c.color : null, // colour of the part underneath, or nothing
+    B3: !!near(CYL_X[0], 6),         // part centred in front of ejector 1 / 2
+    B4: !!near(CYL_X[1], 6),
+    S1: P.s[0] < 0.02, S2: P.s[0] > 0.98,
+    S3: P.s[1] < 0.02, S4: P.s[1] > 0.98,
+  };
+}
+
+// ===================================================================
+// State machine engine
+// A machine definition is a set of states. Each state may have
+//   entry – function run when the state is entered
+//   on    – list of transitions: { ev | when | after, guard, action, target, id }
+//           ev:    event name, e.g. "B1↑", "push"
+//           when:  condition, fires as soon as it is true
+//           after: seconds since the state was entered
+//           id:    the arrow in the diagram that lights up
+// ===================================================================
+const queue = [];
+const send = (to, ev, data) => queue.push({ to, ev, data });
+const broadcast = (ev, data) => queue.push({ to: null, ev, data });
+const trace = [];                 // internal record of all transitions (not shown on the page)
+
+class Machine {
+  constructor(prefix, label, def) {
+    Object.assign(this, { prefix, label, def });
+    this.state = null; this.t0 = 0; this.ctx = {};
+  }
+  start() {
+    flash(this.prefix, "init");
+    record(this.label, `start → ${this.def.initial}`);
+    this.enter(this.def.initial);
+  }
+  enter(state) {
+    this.state = state; this.t0 = SIM.t;
+    this.def.states[state].entry?.(this);
+    markDiagram(this);
+  }
+  transitions() { return this.def.states[this.state].on || []; }
+
+  handle(ev, data) {                      // react to an event, at most one transition
+    for (const t of this.transitions())
+      if (t.ev === ev && (!t.guard || t.guard(this, data))) { this.fire(t, data, ev); return true; }
+    return false;
+  }
+  poll() {                                // check when(...) and after(...) transitions
+    for (const t of this.transitions()) {
+      if (t.ev) continue;
+      const ok = t.when ? t.when(this) : SIM.t - this.t0 >= t.after - 1e-9;
+      if (ok) { this.fire(t, null, t.when ? "when" : `after(${t.after} s)`); return true; }
+    }
+    return false;
+  }
+  fire(t, data, cause) {
+    const from = this.state;
+    t.action?.(this, data);
+    flash(this.prefix, t.id);
+    let target = t.target, branch;
+    if (typeof target === "function") [target, branch] = target(this, data);   // choice pseudostate
+    if (branch) flash(this.prefix, branch);
+    SIM.transitions++;
+    record(this.label, `${from} → ${target}`, cause + (data != null ? ` ${data}` : ""));
+    this.enter(target);
+  }
+}
+
+// ===================================================================
+// The state machines (same as the diagrams)
+// ===================================================================
+const binFor = c => (c === "red" ? 1 : c === "blue" ? 2 : null);
+const M = {};
+
+function ejectorDef(k) {
+  const n = k + 1, sIn = "S" + (2 * k + 1), sOut = "S" + (2 * k + 2);
+  return { initial: "Retracted", states: {
+    Retracted:  { entry: () => { P.valve[k] = false; },
+                  on: [{ ev: "push", target: "Extending", id: "push" }] },
+    Extending:  { entry: () => { P.valve[k] = true; },
+                  on: [{ when: () => SNS[sOut], target: "Retracting", id: "out" }] },
+    Retracting: { entry: () => { P.valve[k] = false; },
+                  on: [{ when: () => SNS[sIn], target: "Retracted", id: "in", action: () => send("sorter", "done", n) }] },
+  } };
+}
+
+const conveyorDef = { initial: "Stopped", states: {
+  Stopped: { entry: () => { P.belt = false; }, on: [{ ev: "run", target: "Running", id: "run" }] },
+  Running: { entry: () => { P.belt = true; },  on: [{ ev: "stop", target: "Stopped", id: "stop" }] },
+} };
+
+const sorterDef = { initial: "WaitPart", states: {
+  WaitPart:  { entry: () => send("conveyor", "stop"),
+               on: [{ ev: "B1↑", target: "ToSensor", id: "b1" }] },
+  ToSensor:  { entry: () => send("conveyor", "run"),
+               on: [{ ev: "photoSensor", id: "b2", action: (m, c) => { m.ctx.target = binFor(c); },
+                      target: m => (m.ctx.target ? ["ToEjector", "toEj"] : ["ToEnd", "toEnd"]) }] },
+  ToEjector: { on: [{ ev: "B3↑", guard: m => m.ctx.target === 1, target: "Ejecting", id: "atEj1" },
+                    { ev: "B4↑", guard: m => m.ctx.target === 2, target: "Ejecting", id: "atEj2" }] },
+  Ejecting:  { entry: m => { send("conveyor", "stop"); send("e" + m.ctx.target, "push"); },
+               on: [{ ev: "done", guard: (m, n) => n === m.ctx.target, target: "WaitPart", id: "done" }] },
+  ToEnd:     { on: [{ after: 6, target: "WaitPart", id: "end" }] },
+} };
+
+// deliver queued events and evaluate when/after transitions until nothing changes
+function settle() {
+  for (let i = 0; i < 50; i++) {
+    let changed = false;
+    while (queue.length) {
+      const m = queue.shift(); changed = true;
+      if (m.to) M[m.to].handle(m.ev, m.data);
+      else for (const k in M) M[k].handle(m.ev, m.data);
+    }
+    for (const k in M) if (M[k].poll()) changed = true;
+    if (!changed) break;
+  }
+}
+
+function sensorEvents() {
+  SNS = readSensors();
+  for (const k of ["B1", "B3", "B4"]) if (SNS[k] && !prevSNS[k]) broadcast(k + "↑");
+  if (SNS.photoSensor && !prevSNS.photoSensor) broadcast("photoSensor", SNS.photoSensor);
+  prevSNS = SNS;
+}
+
+function tick(dt) {
+  SIM.t += dt;
+  plantStep(dt);
+  sensorEvents();
+  settle();
+  demoStep(dt);
+}
+
+// ===================================================================
+// Placing parts (one part at a time, while the sorter waits)
+// ===================================================================
+const canPlace = () => M.sorter.state === "WaitPart" && !P.parts.some(p => p.where === "belt");
+function insertPart(color) {
+  if (!canPlace()) return;
+  P.parts.push({ id: P.nextId++, color, x: 140, y: 270, r: 22, where: "belt" });
+  record("Operator", `places a ${color} part`);
+  SNS = prevSNS; sensorEvents(); settle();
+}
+
+// The demo operator places a new part whenever the station is free.
+const demo = { wait: 0.5, n: 0 };
+const DEMO_COLORS = ["red", "blue", "white", "blue", "red", "red", "white", "blue"];
+function demoStep(dt) {
+  if (!SIM.demo || (demo.wait -= dt) > 0) return;
+  demo.wait = 0.8;
+  if (canPlace()) { insertPart(DEMO_COLORS[demo.n++ % DEMO_COLORS.length]); demo.wait = 1.2; }
+}
+
+// ===================================================================
+// Drawing
+// ===================================================================
+function markDiagram(m) {
+  document.querySelectorAll(`[id^="s-${m.prefix}-"]`).forEach(el => el.classList.remove("active"));
+  $(`s-${m.prefix}-${m.state}`)?.classList.add("active");
+}
+function flash(prefix, id) {
+  const el = id && $(`t-${prefix}-${id}`);
+  if (!el) return;
+  el.classList.add("flash");
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("flash"), 900);
+}
+function record(who, text, cause) {
+  trace.push(`${SIM.t.toFixed(2)} s  ${who}  ${text}${cause ? "  " + cause : ""}`);
+  if (trace.length > 500) trace.shift();
+}
+
+const partEls = new Map();
+const partsG = $("parts");
+const setAttrs = (el, a) => { for (const k in a) el.setAttribute(k, a[k]); };
+const cls = (id, on) => $(id)?.classList.toggle("on", !!on);
+const COLOR_CLASS = { red: "pr", blue: "pb", white: "pw" };
+
+function render() {
+  $("slats").setAttribute("transform", `translate(${slat.toFixed(2)} 0)`);
+  for (let k = 0; k < 2; k++) {
+    const y = 212 + P.s[k] * 88;
+    $(`plate${k + 1}`).setAttribute("y", y.toFixed(1));
+    $(`rod${k + 1}`).setAttribute("y2", y.toFixed(1));
+    cls(`y${k + 1}`, P.valve[k]);
+  }
+  cls("m1", P.belt);
+  for (const k of ["b1", "b3", "b4"]) cls(k, SNS[k.toUpperCase()]);
+  cls("b2", SNS.photoSensor);
+  $("b2lens").style.fill = SNS.photoSensor ? `var(--${SNS.photoSensor})` : "";
+  for (const k of ["s1", "s2", "s3", "s4"]) cls(k, SNS[k.toUpperCase()]);
+  for (let k = 0; k < 3; k++) $(`bin${k + 1}n`).textContent = P.bins[k].count ? `${P.bins[k].count} ×` : "";
+
+  // parts
+  const alive = new Set();
+  for (const p of P.parts) {
+    alive.add(p.id);
+    let el = partEls.get(p.id);
+    if (!el) { el = document.createElementNS(SVGNS, "circle"); el.setAttribute("class", COLOR_CLASS[p.color]); partsG.append(el); partEls.set(p.id, el); }
+    setAttrs(el, { cx: p.x.toFixed(1), cy: p.y.toFixed(1), r: p.r.toFixed(1) });
+  }
+  for (const [id, el] of partEls) if (!alive.has(id)) { el.remove(); partEls.delete(id); }
+
+  // controls and state chips
+  $("clock").textContent = `t = ${SIM.t.toFixed(2)} s`;
+  $("play").textContent = SIM.playing ? "❚❚ Pause" : "▶ Start";
+  const free = canPlace();
+  document.querySelectorAll("[data-part]").forEach(b => { b.disabled = !free; });
+  $("chips").replaceChildren(...["sorter", "conveyor", "e1", "e2"].map(k => {
+    const c = document.createElement("span"), b = document.createElement("b");
+    c.className = "chip"; b.textContent = M[k].label;
+    c.append(b, M[k].state);
+    return c;
+  }));
+}
+
+// ===================================================================
+// Setup, main loop and controls
+// ===================================================================
+function powerOn() {
+  P = newPlant(); slat = 0; SIM.t = 0; queue.length = 0; trace.length = 0;
+  demo.wait = 0.5; demo.n = 0;
+  SNS = prevSNS = readSensors();
+  M.sorter = new Machine("so", "Sorter", sorterDef);
+  M.conveyor = new Machine("cv", "Conveyor", conveyorDef);
+  M.e1 = new Machine("e1", "Ejector 1", ejectorDef(0));
+  M.e2 = new Machine("e2", "Ejector 2", ejectorDef(1));
+  M.conveyor.start(); M.e1.start(); M.e2.start(); M.sorter.start();
+  settle();
+  render();
+}
+
+let last = null, acc = 0;
+function frame(ts) {
+  const real = last == null ? 0 : Math.min(0.1, (ts - last) / 1000);
+  last = ts;
+  if (SIM.playing) {
+    acc += real * SIM.speed;
+    while (acc >= DT) { tick(DT); acc -= DT; }
+  }
+  render();
+  requestAnimationFrame(frame);
+}
+
+$("play").onclick = () => { SIM.playing = !SIM.playing; render(); };
+$("next").onclick = () => {
+  SIM.playing = false;
+  const n = SIM.transitions;
+  for (let i = 0; i < 20 / DT && SIM.transitions === n; i++) tick(DT);
+  render();
+};
+$("reset").onclick = () => { SIM.playing = false; powerOn(); };
+$("speed").onchange = e => { SIM.speed = +e.target.value; };
+$("demo").onchange = e => { SIM.demo = e.target.checked; };
+document.addEventListener("click", e => {
+  const p = e.target.closest("[data-part]");
+  if (p) { insertPart(p.dataset.part); render(); }
+});
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" && !e.target.closest("button, select, input")) { e.preventDefault(); $("play").click(); }
+});
+
+powerOn();
+requestAnimationFrame(frame);
+})();
+
+</script>
